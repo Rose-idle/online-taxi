@@ -1,0 +1,15 @@
+server:
+  port: 9001
+
+alipay:
+  appId: YOUR_ALIPAY_APP_ID            # 本地运行时改成你的支付宝沙箱 appId
+  appPrivateKey: YOUR_ALIPAY_APP_PRIVATE_KEY  # 本地运行时改成你的应用私钥
+  publicKey: YOUR_ALIPAY_PUBLIC_KEY    # 本地运行时改成支付宝公钥
+  notifyUrl: YOUR_ALIPAY_NOTIFY_URL    # 本地运行时改成你的回调地址
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+  application:
+    name: service-pay

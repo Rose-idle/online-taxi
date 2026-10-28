@@ -1,0 +1,64 @@
+整体联调：
+
+乘客端：
+手机号：18178100001
+验证码：643785
+"accessToken": eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwaG9uZSI6IjE4MTc4MTAwMDAxIiwiaWRlbnRpdHkiOiIxIiwidG9rZW5UaW1lIjoiV2VkIE9jdCAyMSAxMDo0MTo0MiBDU1QgMjAyNiIsInRva2VuVHlwZSI6ImFjY2Vzc1Rva2VuIn0.FTvumBiObRxi3z4SW7cAdHiYQyxeurXBrxyoi9ZiOKE
+
+预估价格：
+{
+    "depLongitude": "116.321554",
+    "depLatitude": "39.895008",
+    "destLongitude": "116.309709",
+    "destLatitude": "39.924239",
+    "cityCode":"110000",
+    "vehicleType":1
+}
+
+司机端：
+手机号：13910733521
+验证码：137874
+"accessToken": eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJwaG9uZSI6IjEzOTEwNzMzNTIxIiwiaWRlbnRpdHkiOiIyIiwidG9rZW5UaW1lIjoiV2VkIE9jdCAyMSAxMDo1MjoyMiBDU1QgMjAyNiIsInRva2VuVHlwZSI6ImFjY2Vzc1Rva2VuIn0.ZlnSW_X2iG_UObmJs2_Zdt4kOt1M3K3SBlPhZIjA87k
+
+订单：
+2112898724429672449
+
+
+
+{
+    "carId": 2112740393752752130,
+    "points": [
+                  {
+                      "location": "116.317949,39.896654",
+                      "locatetime": 1792591000000
+                  },
+                  {
+                      "location": "116.313486,39.895995",
+                      "locatetime": 1792591001000
+                  },
+                  {
+                      "location": "116.310567,39.897181",
+                      "locatetime": 1792591002000
+                  },
+                  {
+                      "location": "116.310224,39.909691",
+                      "locatetime": 1792591003000
+                  },
+                  {
+                      "location": "116.310224,39.915484",
+                      "locatetime": 1792591004000
+                  },
+                  {
+                      "location": "116.310224,39.917196",
+                      "locatetime": 1792591005000
+                  },
+                  {
+                      "location": "116.310224,39.920224",
+                      "locatetime": 1792591006000
+                  },
+                  {
+                      "location": "116.309709,39.922989",
+                      "locatetime": 1792591007000
+                  }
+              ]
+}

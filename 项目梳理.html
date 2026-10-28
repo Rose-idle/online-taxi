@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>在线出租车系统 · 架构与订单状态机梳理</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: #f4f6f8; color: #23303a; line-height: 1.5; padding: 28px 20px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #6b7a86; font-size: 13px; margin-bottom: 24px; }
+  h2 { font-size: 16px; margin: 28px 0 12px; padding-left: 10px; border-left: 4px solid #2f6f8f; }
+  .layer { background: #fff; border: 1px solid #e1e7ec; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+  .layer-label { font-size: 12px; color: #2f6f8f; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
+  .cards { display: flex; flex-wrap: wrap; gap: 10px; }
+  .card { border: 1px solid #d6dee4; border-radius: 8px; padding: 8px 12px; font-size: 13px; background: #fbfcfd; min-width: 130px; flex: 1; }
+  .card b { display: block; font-size: 13.5px; }
+  .card span { color: #6b7a86; font-size: 12px; }
+  .core { border: 2px solid #c0392b; background: #fdf3f2; }
+  .core .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#c0392b; margin-right:5px; }
+  .ext { background: #f0f7f1; border-color: #bcd8c1; }
+  .mid { background: #f3f4f6; border-color: #cfd6dd; }
+  .arrow-down { text-align: center; color: #9aa7b1; font-size: 18px; margin: 2px 0; }
+  /* state machine */
+  .sm { background: #fff; border: 1px solid #e1e7ec; border-radius: 10px; padding: 20px 16px; overflow-x: auto; }
+  .row { display: flex; align-items: stretch; gap: 0; min-width: 900px; }
+  .node { flex: 1; text-align: center; border-radius: 8px; padding: 10px 6px; font-size: 12.5px; border: 1.5px solid; position: relative; }
+  .node .num { font-size: 18px; font-weight: 800; display: block; }
+  .node .name { font-weight: 600; }
+  .node .act { color: #6b7a86; font-size: 11px; display: block; margin-top: 3px; }
+  .arr { display: flex; align-items: center; color: #9aa7b1; font-size: 16px; padding: 0 3px; flex: 0 0 auto; }
+  .n0 { background:#f2f3f4; border-color:#b8c0c8; color:#5a6670; }
+  .n1 { background:#e8f1f7; border-color:#7fa8c4; }
+  .n2 { background:#e6f4ea; border-color:#86c097; }
+  .n3 { background:#e6f4ea; border-color:#86c097; }
+  .n4 { background:#e6f4ea; border-color:#86c097; }
+  .n5 { background:#fef6e0; border-color:#e0b95c; }
+  .n6 { background:#fef6e0; border-color:#e0b95c; }
+  .n7 { background:#fdeee6; border-color:#e0a080; }
+  .n8 { background:#dff0e4; border-color:#4e9a66; }
+  .n9 { background:#fdeceb; border-color:#d98a84; color:#a23a33; }
+  .branch { margin-top: 14px; display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; }
+  .branch .tag { padding: 6px 10px; border-radius: 6px; background: #f4f6f8; border: 1px dashed #c2ccd4; }
+  .note { font-size: 12.5px; color: #6b7a86; margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+  th, td { border: 1px solid #e1e7ec; padding: 7px 10px; text-align: left; }
+  th { background: #f0f3f5; font-weight: 600; }
+  code { background:#eef1f3; padding:1px 5px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>在线出租车（online-taxi）系统梳理</h1>
+  <div class="sub">Spring Cloud Alibaba 微服务教学项目 · 11 个后端服务 + internal-common · 乘客端 / 司机端 Vue 前端（已打包 APK）</div>
+
+  <h2>一、微服务架构分层</h2>
+
+  <div class="layer">
+    <div class="layer-label">终端层</div>
+    <div class="cards">
+      <div class="card"><b>乘客端 APP</b><span>下单 / 估价 / 支付</span></div>
+      <div class="card"><b>司机端 APP</b><span>出车 / 接单 / 行程</span></div>
+      <div class="card"><b>运营后台 Boss</b><span>司机与车辆管理</span></div>
+    </div>
+  </div>
+  <div class="arrow-down">▼ HTTPS / JSON</div>
+
+  <div class="layer">
+    <div class="layer-label">接入层（API 网关，内含 JWT 拦截器）</div>
+    <div class="cards">
+      <div class="card"><b>api-passenger</b><span>端口 8081 · 乘客入口</span></div>
+      <div class="card"><b>api-driver</b><span>端口 8088 · 司机入口</span></div>
+      <div class="card"><b>api-boss</b><span>端口 8087 · 管理入口</span></div>
+    </div>
+  </div>
+  <div class="arrow-down">▼ OpenFeign 远程调用</div>
+
+  <div class="layer">
+    <div class="layer-label">业务服务层</div>
+    <div class="cards">
+      <div class="card core"><span class="dot"></span><b>service-order</b><span>8007 · 订单状态机 + 自动派单（核心）</span></div>
+      <div class="card"><b>service-price</b><span>8084 · 预估 / 实际计价</span></div>
+      <div class="card"><b>serice-map</b><span>8085 · 高德地图封装</span></div>
+      <div class="card"><b>service-driver-user</b><span>8086 · 司机 / 车辆 / 绑定关系</span></div>
+      <div class="card"><b>service-passenger-user</b><span>8083 · 乘客账户</span></div>
+      <div class="card"><b>service-verificationcode</b><span>8082 · 短信验证码</span></div>
+      <div class="card"><b>service-sse-push</b><span>9000 · SSE 实时推送</span></div>
+      <div class="card"><b>service-pay</b><span>支付宝沙箱收款</span></div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="layer">
+    <div class="layer-label">中间件 & 外部依赖</div>
+    <div class="cards">
+      <div class="card mid"><b>Nacos</b><span>注册配置中心 8848</span></div>
+      <div class="card mid"><b>MySQL</b><span>每服务独立库（3306）</span></div>
+      <div class="card mid"><b>Redis + Redisson</b><span>验证码 / 黑名单 / 分布式锁</span></div>
+      <div class="card ext"><b>高德地图</b><span>路径规划 · 周边搜车 · 轨迹</span></div>
+      <div class="card ext"><b>支付宝沙箱</b><span>在线收款</span></div>
+    </div>
+  </div>
+
+  <h2>二、订单状态机（OrderConstants）</h2>
+  <div class="sm">
+    <div class="row">
+      <div class="node n1"><span class="num">1</span><span class="name">订单开始</span><span class="act">乘客下单</span></div>
+      <div class="arr">➜</div>
+      <div class="node n2"><span class="num">2</span><span class="name">司机接单</span><span class="act">派单匹配</span></div>
+      <div class="arr">➜</div>
+      <div class="node n3"><span class="num">3</span><span class="name">去接乘客</span><span class="act">to-pick-up</span></div>
+      <div class="arr">➜</div>
+      <div class="node n4"><span class="num">4</span><span class="name">到达起点</span><span class="act">arrived-departure</span></div>
+      <div class="arr">➜</div>
+      <div class="node n5"><span class="num">5</span><span class="name">乘客上车</span><span class="act">开始计费行程</span></div>
+      <div class="arr">➜</div>
+      <div class="node n6"><span class="num">6</span><span class="name">到达目的地</span><span class="act">算里程/时长/车费</span></div>
+      <div class="arr">➜</div>
+      <div class="node n7"><span class="num">7</span><span class="name">发起收款</span><span class="act">push-pay-info</span></div>
+      <div class="arr">➜</div>
+      <div class="node n8"><span class="num">8</span><span class="name">支付完成</span><span class="act">订单闭环</span></div>
+    </div>
+    <div class="branch">
+      <div class="tag"><b>0 订单无效</b>：派单循环 6 次（每次间隔 20s）均未匹配到司机</div>
+      <div class="tag"><b>9 订单取消</b>：按操作方（乘客1/司机2）+ 当前状态判定「提前取消 / 违约取消」（接单后超过 1 分钟即违约）</div>
+    </div>
+    <div class="note">派单核心：以上车点为中心，按 2km → 4km → 5km 半径用高德周边搜索空闲车辆；对每辆车查「绑定司机 + 是否出车中 + 车型是否匹配」，用 Redisson 对 driverId 加锁，校验司机无进行中订单后落单，并 SSE 同时推送司机（新订单详情）与乘客（车牌 / 车型 / 司机位置）。</div>
+  </div>
+
+  <h2>三、关键业务规则速查</h2>
+  <table>
+    <tr><th>环节</th><th>规则 / 要点</th></tr>
+    <tr><td>登录鉴权</td><td>手机号 + 验证码 → 签发 JWT（<code>identity</code>：1=乘客，2=司机），API 层 <code>JwtInterceptor</code> 校验</td></tr>
+    <tr><td>预估价格</td><td>高德 direction 取距离(米)/时长(秒) → 读 price_rule 最新版本 → 起步价 + 超起步里程费 + 时长费</td></tr>
+    <tr><td>下单前置校验</td><td>城市有司机 · 计价规则为最新版本 · 城市已开通服务 · 乘客无进行中订单</td></tr>
+    <tr><td>计费公式</td><td>起步价 + max(0, 里程-起步里程)×单价/km + 时长(分)×单价/分，四舍五入 2 位</td></tr>
+    <tr><td>行程结束</td><td>调高德 trsearch 轨迹查询得实际 driveMile / driveTime，再算实际价格</td></tr>
+  </table>
+
+  <h2>四、当前进展与待注意</h2>
+  <table>
+    <tr><th>类别</th><th>说明</th></tr>
+    <tr><td>阶段</td><td>整体联调中（qa 文件留存乘客 18178100001 / 司机 13910733521 及 accessToken）</td></tr>
+    <tr><td>教学简化</td><td>派单同步阻塞 sleep；SSE 用单机内存 Map（不支持集群）；黑名单设备逻辑被注释</td></tr>
+    <tr><td>遗留拼写</td><td>模块名 <code>serice-map</code>、包名 <code>apipassenger</code>、<code>ServiceVefificationcodeClient</code></td></tr>
+    <tr><td>硬编码</td><td>MySQL 密码 <code>041015</code>、各服务连 localhost，上线前需外置配置</td></tr>
+  </table>
+</div>
+</body>
+</html>
